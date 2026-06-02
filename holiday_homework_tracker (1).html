@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holiday Homework Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            min-height: 100vh;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        /* Custom springy checkmark animation with zero shadow */
+        .springy-check {
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s, border-color 0.15s;
+        }
+        .springy-check:active {
+            transform: scale(0.92);
+        }
+        /* Custom styling for completed row */
+        .subject-row {
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        /* Confetti canvas */
+        #confettiCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        /* Dragging visuals */
+        .draggable-row.dragging {
+            opacity: 0.4;
+            border: 2px dashed #0071e3 !important;
+        }
+    </style>
+</head>
+<body class="bg-[#f5f5f7] dark:bg-[#121212] font-sans text-[#1d1d1f] dark:text-[#f5f5f7] font-semibold antialiased p-3 sm:p-6 md:p-8 relative transition-colors duration-200">
+
+    <!-- Confetti canvas for celebrations -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Main Container -->
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- Header Section (Squarical Apple Style, No Shadows, Bold Text) -->
+        <header class="bg-white dark:bg-[#1c1c1e] rounded-2xl p-6 border border-[#e5e5e7] dark:border-[#2c2c2e] flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors">
+            <div class="flex items-center gap-4">
+                <div class="h-14 w-14 bg-[#1d1d1f] dark:bg-[#f5f5f7] text-white dark:text-[#1d1d1f] rounded-[18px] flex items-center justify-center text-2xl border border-transparent">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl sm:text-2xl text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">Holiday Homework Tracker</h1>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <p class="text-[#86868b] dark:text-[#8e8e93] text-xs font-semibold">Track and organize your school assignments cleanly</p>
+                        <span class="inline-flex items-center gap-1 text-[10px] bg-[#34c759]/15 text-[#34c759] dark:text-[#30d158] font-bold px-1.5 py-0.5 rounded">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#34c759] animate-pulse"></span>
+                            Saved in Browser
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Theme toggle button -->
+                <button id="themeToggle" onclick="toggleTheme()" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Toggle Theme">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                    <span id="themeText" class="hidden sm:inline">Dark Mode</span>
+                </button>
+                <!-- Sound Toggle -->
+                <button id="soundToggle" onclick="toggleSound()" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Toggle audio feedback">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-[#34c759] dark:text-[#30d158]"></i>
+                    <span class="hidden sm:inline">Sounds: ON</span>
+                </button>
+                <!-- Reset Button -->
+                <button onclick="resetTracker()" class="p-2.5 bg-[#ff3b30]/10 hover:bg-[#ff3b30]/20 text-[#ff3b30] dark:text-[#ff453a] dark:bg-[#ff453a]/10 dark:hover:bg-[#ff453a]/20 rounded-xl text-xs flex items-center gap-2 transition border border-[#ff3b30]/20 dark:border-[#ff453a]/20 font-bold" title="Reset all progress">
+                    <i class="fa-solid fa-arrow-rotate-left"></i>
+                    <span class="hidden sm:inline">Reset Data</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Summary Widget Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Overall Progress Gauge (Solid Accents) -->
+            <div class="bg-white dark:bg-[#1c1c1e] rounded-2xl p-6 border border-[#e5e5e7] dark:border-[#2c2c2e] flex items-center gap-6 transition-colors">
+                <div class="relative flex items-center justify-center flex-shrink-0">
+                    <svg class="w-20 h-20 transform -rotate-90">
+                        <circle cx="40" cy="40" r="34" stroke="#f5f5f7" class="dark:stroke-[#2c2c2e]" stroke-width="7" fill="transparent"/>
+                        <circle id="progressCircle" cx="40" cy="40" r="34" stroke="#0071e3" class="dark:stroke-[#0a84ff]" stroke-width="7" fill="transparent" 
+                                stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke-linecap="square" class="transition-all duration-500"/>
+                    </svg>
+                    <span id="percentageText" class="absolute font-extrabold text-base text-[#0071e3] dark:text-[#0a84ff]">0%</span>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-sm">Overall Progress</h3>
+                    <p class="text-xs text-[#86868b] dark:text-[#8e8e93] mt-0.5"><span id="doneCount" class="font-extrabold text-[#0071e3] dark:text-[#0a84ff]">0</span> of <span class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7]">6</span> Done</p>
+                    <div id="motivationPhrase" class="text-[11px] text-[#0071e3] dark:text-[#0a84ff] font-bold uppercase tracking-wider mt-2">Let's get started! 🚀</div>
+                </div>
+            </div>
+
+            <!-- Dynamic Countdown Dashboard (Solid styling, target June 5) -->
+            <div class="bg-white dark:bg-[#1c1c1e] rounded-2xl p-6 border border-[#e5e5e7] dark:border-[#2c2c2e] flex flex-col justify-between transition-colors">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-sm flex items-center gap-1.5">
+                        <i class="fa-regular fa-clock text-[#ff9500] dark:text-[#ff9f0a]"></i> Target Deadline
+                    </span>
+                    <input type="date" id="deadlineInput" onchange="saveDeadline()" class="text-xs bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5e7] dark:border-[#3a3a3c] rounded-lg p-1 text-[#1d1d1f] dark:text-[#f5f5f7] font-bold focus:outline-none focus:ring-1 focus:ring-[#0071e3] dark:focus:ring-[#0a84ff]">
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-[#ff9500]/10 rounded-xl p-1.5 border border-[#ff9500]/20">
+                        <span id="daysLeft" class="block font-extrabold text-xl text-[#ff9500] dark:text-[#ff9f0a]">00</span>
+                        <span class="text-[9px] uppercase font-extrabold text-[#ff9500] dark:text-[#ff9f0a] tracking-wider">Days</span>
+                    </div>
+                    <div class="bg-[#0071e3]/10 rounded-xl p-1.5 border border-[#0071e3]/20 dark:border-[#0a84ff]/20">
+                        <span id="hoursLeft" class="block font-extrabold text-xl text-[#0071e3] dark:text-[#0a84ff]">00</span>
+                        <span class="text-[9px] uppercase font-extrabold text-[#0071e3] dark:text-[#0a84ff] tracking-wider">Hours</span>
+                    </div>
+                    <div class="bg-[#af52de]/10 rounded-xl p-1.5 border border-[#af52de]/20 dark:border-[#bf5af2]/20">
+                        <span id="minsLeft" class="block font-extrabold text-xl text-[#af52de] dark:text-[#bf5af2]">00</span>
+                        <span class="text-[9px] uppercase font-extrabold text-[#af52de] dark:text-[#bf5af2] tracking-wider">Mins</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motivation / Goal Rewards (Solid design) -->
+            <div class="bg-white dark:bg-[#1c1c1e] rounded-2xl p-6 border border-[#e5e5e7] dark:border-[#2c2c2e] flex flex-col justify-between transition-colors">
+                <div>
+                    <span class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-gift text-[#ff2d55] dark:text-[#ff375f]"></i> Reward Goal
+                    </span>
+                    <input type="text" id="rewardInput" onchange="saveReward()" placeholder="E.g., Amusement Park day!" class="w-full mt-2 bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5e7] dark:border-[#3a3a3c] focus:border-[#ff2d55] dark:focus:border-[#ff375f] py-1.5 px-3 rounded-xl text-xs focus:outline-none text-[#1d1d1f] dark:text-[#f5f5f7] font-bold transition">
+                </div>
+                <div class="text-[10px] text-[#86868b] dark:text-[#8e8e93] mt-2 flex items-center gap-1">
+                    <i class="fa-solid fa-circle-info text-[#0071e3] dark:text-[#0a84ff]"></i>
+                    <span>Unlocks when all 6 checkmarks are complete!</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Main Single Checklist Card -->
+        <main class="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-[#e5e5e7] dark:border-[#2c2c2e] overflow-hidden transition-colors">
+            <div class="bg-[#1d1d1f] dark:bg-[#2c2c2e] px-6 py-5 text-white flex justify-between items-center border-b border-[#e5e5e7] dark:border-[#3a3a3c]">
+                <div>
+                    <h2 class="font-extrabold text-lg tracking-tight">Holiday Homework Checklist</h2>
+                    <p class="text-[#86868b] dark:text-[#8e8e93] text-xs font-semibold mt-0.5">Your core subject trackers</p>
+                </div>
+                <span class="bg-[#3a3a3c] dark:bg-[#1c1c1e] text-[#f5f5f7] dark:text-[#8e8e93] font-extrabold text-xs px-3.5 py-1.5 rounded-full uppercase tracking-wider">
+                    6 Subjects
+                </span>
+            </div>
+
+            <!-- Subjects list wrapper -->
+            <div class="p-6 divide-y divide-[#e5e5e7] dark:divide-[#2c2c2e]">
+                
+                <!-- ENGLISH ROW -->
+                <div id="row-ENGLISH" class="subject-row py-5 px-4 rounded-xl border border-transparent flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-5 flex-1 min-w-0 cursor-pointer" onclick="toggleCollapse('ENGLISH')">
+                            <button onclick="event.stopPropagation(); toggleSubject('ENGLISH')" class="springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl border transition-all flex-shrink-0" id="chk-ENGLISH">
+                                <!-- Populated Dynamically -->
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-lg text-[#0071e3] dark:text-[#0a84ff]"><i class="fa-solid fa-book-open"></i></span>
+                                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-base tracking-tight">ENGLISH</h3>
+                                    <span id="badge-ENGLISH" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openTaskModal('ENGLISH')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Add homework or notes">
+                                <i class="fa-solid fa-pencil"></i>
+                                <span class="hidden sm:inline">Add / Edit</span>
+                            </button>
+                            <button onclick="toggleCollapse('ENGLISH')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center justify-center transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Expand/Collapse">
+                                <i id="chevron-ENGLISH" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="items-container-ENGLISH" class="pl-0 sm:pl-[76px] space-y-3 hidden">
+                        <ul id="hw-list-ENGLISH" class="space-y-1.5 list-none"></ul>
+                        <div id="notes-container-ENGLISH" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+                <!-- HINDI ROW -->
+                <div id="row-HINDI" class="subject-row py-5 px-4 rounded-xl border border-transparent flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-5 flex-1 min-w-0 cursor-pointer" onclick="toggleCollapse('HINDI')">
+                            <button onclick="event.stopPropagation(); toggleSubject('HINDI')" class="springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl border transition-all flex-shrink-0" id="chk-HINDI">
+                                <!-- Populated Dynamically -->
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-lg text-[#ff9500] dark:text-[#ff9f0a]"><i class="fa-solid fa-pen-nib"></i></span>
+                                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-base tracking-tight">HINDI</h3>
+                                    <span id="badge-HINDI" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openTaskModal('HINDI')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Add homework or notes">
+                                <i class="fa-solid fa-pencil"></i>
+                                <span class="hidden sm:inline">Add / Edit</span>
+                            </button>
+                            <button onclick="toggleCollapse('HINDI')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center justify-center transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Expand/Collapse">
+                                <i id="chevron-HINDI" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="items-container-HINDI" class="pl-0 sm:pl-[76px] space-y-3 hidden">
+                        <ul id="hw-list-HINDI" class="space-y-1.5 list-none"></ul>
+                        <div id="notes-container-HINDI" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+                <!-- MATHS ROW -->
+                <div id="row-MATHS" class="subject-row py-5 px-4 rounded-xl border border-transparent flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-5 flex-1 min-w-0 cursor-pointer" onclick="toggleCollapse('MATHS')">
+                            <button onclick="event.stopPropagation(); toggleSubject('MATHS')" class="springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl border transition-all flex-shrink-0" id="chk-MATHS">
+                                <!-- Populated Dynamically -->
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-lg text-[#af52de] dark:text-[#bf5af2]"><i class="fa-solid fa-compass-drafting"></i></span>
+                                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-base tracking-tight">MATHS</h3>
+                                    <span id="badge-MATHS" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openTaskModal('MATHS')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Add homework or notes">
+                                <i class="fa-solid fa-pencil"></i>
+                                <span class="hidden sm:inline">Add / Edit</span>
+                            </button>
+                            <button onclick="toggleCollapse('MATHS')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center justify-center transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Expand/Collapse">
+                                <i id="chevron-MATHS" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="items-container-MATHS" class="pl-0 sm:pl-[76px] space-y-3 hidden">
+                        <ul id="hw-list-MATHS" class="space-y-1.5 list-none"></ul>
+                        <div id="notes-container-MATHS" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+                <!-- SCIENCE ROW -->
+                <div id="row-SCIENCE" class="subject-row py-5 px-4 rounded-xl border border-transparent flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-5 flex-1 min-w-0 cursor-pointer" onclick="toggleCollapse('SCIENCE')">
+                            <button onclick="event.stopPropagation(); toggleSubject('SCIENCE')" class="springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl border transition-all flex-shrink-0" id="chk-SCIENCE">
+                                <!-- Populated Dynamically -->
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-lg text-[#34c759] dark:text-[#30d158]"><i class="fa-solid fa-atom"></i></span>
+                                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-base tracking-tight">SCIENCE</h3>
+                                    <span id="badge-SCIENCE" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openTaskModal('SCIENCE')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Add homework or notes">
+                                <i class="fa-solid fa-pencil"></i>
+                                <span class="hidden sm:inline">Add / Edit</span>
+                            </button>
+                            <button onclick="toggleCollapse('SCIENCE')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center justify-center transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Expand/Collapse">
+                                <i id="chevron-SCIENCE" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="items-container-SCIENCE" class="pl-0 sm:pl-[76px] space-y-3 hidden">
+                        <ul id="hw-list-SCIENCE" class="space-y-1.5 list-none"></ul>
+                        <div id="notes-container-SCIENCE" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+                <!-- SST ROW -->
+                <div id="row-SST" class="subject-row py-5 px-4 rounded-xl border border-transparent flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-5 flex-1 min-w-0 cursor-pointer" onclick="toggleCollapse('SST')">
+                            <button onclick="event.stopPropagation(); toggleSubject('SST')" class="springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl border transition-all flex-shrink-0" id="chk-SST">
+                                <!-- Populated Dynamically -->
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-lg text-[#5ac8fa] dark:text-[#64d2ff]"><i class="fa-solid fa-globe"></i></span>
+                                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-base tracking-tight">SST</h3>
+                                    <span id="badge-SST" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openTaskModal('SST')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Add homework or notes">
+                                <i class="fa-solid fa-pencil"></i>
+                                <span class="hidden sm:inline">Add / Edit</span>
+                            </button>
+                            <button onclick="toggleCollapse('SST')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center justify-center transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Expand/Collapse">
+                                <i id="chevron-SST" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="items-container-SST" class="pl-0 sm:pl-[76px] space-y-3 hidden">
+                        <ul id="hw-list-SST" class="space-y-1.5 list-none"></ul>
+                        <div id="notes-container-SST" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+                <!-- AI ROW -->
+                <div id="row-AI" class="subject-row py-5 px-4 rounded-xl border border-transparent flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-5 flex-1 min-w-0 cursor-pointer" onclick="toggleCollapse('AI')">
+                            <button onclick="event.stopPropagation(); toggleSubject('AI')" class="springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl border transition-all flex-shrink-0" id="chk-AI">
+                                <!-- Populated Dynamically -->
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-lg text-[#ff2d55] dark:text-[#ff375f]"><i class="fa-solid fa-brain"></i></span>
+                                    <h3 class="font-extrabold text-[#1d1d1f] dark:text-[#f5f5f7] text-base tracking-tight">AI</h3>
+                                    <span id="badge-AI" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openTaskModal('AI')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center gap-2 transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Add homework or notes">
+                                <i class="fa-solid fa-pencil"></i>
+                                <span class="hidden sm:inline">Add / Edit</span>
+                            </button>
+                            <button onclick="toggleCollapse('AI')" class="p-2.5 bg-white hover:bg-[#f5f5f7] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] rounded-xl text-xs flex items-center justify-center transition border border-[#e5e5e7] dark:border-[#3a3a3c] font-bold" title="Expand/Collapse">
+                                <i id="chevron-AI" class="fa-solid fa-chevron-down transition-transform duration-200"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="items-container-AI" class="pl-0 sm:pl-[76px] space-y-3 hidden">
+                        <ul id="hw-list-AI" class="space-y-1.5 list-none"></ul>
+                        <div id="notes-container-AI" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Flat Squarical Task Adding ModalPopup Box (True Flat, High Contrast) -->
+    <div id="taskModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-lg rounded-2xl border border-[#e5e5e7] dark:border-[#2c2c2e] flex flex-col overflow-hidden max-h-[85vh]">
+            <!-- Header -->
+            <div class="bg-[#1d1d1f] dark:bg-[#2c2c2e] px-6 py-4 text-white flex justify-between items-center border-b border-[#e5e5e7] dark:border-[#3a3a3c]">
+                <h3 class="font-extrabold text-base tracking-tight flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-[#ffd60a]"></i>
+                    Manage <span id="modalSubjectName" class="text-[#0a84ff]">Subject</span> Assignments
+                </h3>
+                <button onclick="closeTaskModal()" class="text-white/60 hover:text-white transition p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="p-6 overflow-y-auto space-y-5">
+                <!-- Input Box -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-extrabold uppercase tracking-wider text-[#86868b] dark:text-[#8e8e93]">Add Homework Detail or Note</label>
+                    <input type="text" id="modalInput" placeholder="E.g., Complete chemistry worksheet" class="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#e5e5e7] dark:border-[#3a3a3c] rounded-xl py-2.5 px-3 text-xs focus:outline-none focus:border-[#0071e3] dark:focus:border-[#0a84ff] text-[#1d1d1f] dark:text-[#f5f5f7] font-bold">
+                </div>
+                <!-- Classification Toggle -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-extrabold uppercase tracking-wider text-[#86868b] dark:text-[#8e8e93]">Task Type Classification</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="selectModalType('homework')" id="btnTypeHomework" class="py-2.5 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-[#0071e3]/10 border-[#0071e3] text-[#0071e3] dark:bg-[#0a84ff]/10 dark:border-[#0a84ff] dark:text-[#0a84ff]">
+                            <i class="fa-solid fa-list-check"></i> Homework (Checkbox)
+                        </button>
+                        <button onclick="selectModalType('note')" id="btnTypeNote" class="py-2.5 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-transparent border-[#e5e5e7] dark:border-[#3a3a3c] text-[#86868b] dark:text-[#8e8e93]">
+                            <i class="fa-solid fa-note-sticky"></i> Note (Yellow Pill)
+                        </button>
+                    </div>
+                </div>
+                <!-- Submit Action button -->
+                <button onclick="addTaskFromModal()" class="w-full py-3 bg-[#1d1d1f] hover:bg-[#333] dark:bg-[#f5f5f7] dark:hover:bg-white text-white dark:text-[#1d1d1f] font-extrabold rounded-xl text-xs transition border-0">
+                    Add Task
+                </button>
+                <!-- Task List within modal with sorting options -->
+                <div class="pt-5 border-t border-[#e5e5e7] dark:border-[#2c2c2e]">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-[11px] font-extrabold uppercase tracking-wider text-[#86868b] dark:text-[#8e8e93]">Tasks & notes order (Drag to sort)</h4>
+                        <span class="text-[9px] text-[#0071e3] dark:text-[#0a84ff] font-bold uppercase">Drag row or tap arrows</span>
+                    </div>
+                    <div id="modalItemsList" class="space-y-1 divide-y divide-[#e5e5e7] dark:divide-[#2c2c2e]">
+                        <!-- Dynamic items -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flat Action Toast Notification Message Alert -->
+    <div id="customAlert" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-200 pointer-events-none">
+        <div id="alertBox" class="bg-[#1d1d1f] dark:bg-[#1c1c1e] text-white dark:text-[#f5f5f7] rounded-xl px-5 py-3.5 border border-[#3a3a3c] dark:border-[#2c2c2e] flex items-center gap-3">
+            <span id="alertIcon" class="text-[#34c759] dark:text-[#30d158] text-base"></span>
+            <span id="alertMessage" class="text-xs font-extrabold">Alert message</span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration & State
+        const SUBJECTS = ['ENGLISH', 'HINDI', 'MATHS', 'SCIENCE', 'SST', 'AI'];
+        
+        let state = {
+            checked: {
+                ENGLISH: false,
+                HINDI: false,
+                MATHS: false,
+                SCIENCE: false,
+                SST: false,
+                AI: false
+            },
+            notes: {
+                ENGLISH: '',
+                HINDI: '',
+                MATHS: '',
+                SCIENCE: '',
+                SST: '',
+                AI: ''
+            },
+            items: {
+                ENGLISH: [],
+                HINDI: [],
+                MATHS: [],
+                SCIENCE: [],
+                SST: [],
+                AI: []
+            },
+            collapsed: {
+                ENGLISH: false,
+                HINDI: false,
+                MATHS: false,
+                SCIENCE: false,
+                SST: false,
+                AI: false
+            },
+            deadline: '2026-06-05', // Default target: June 5, 2026 as requested
+            reward: 'Pizza Party & Celebratory Outing!',
+            soundEnabled: true,
+            darkMode: false
+        };
+
+        // Modal Active session states
+        let activeModalSubject = '';
+        let activeModalType = 'homework'; // 'homework' or 'note'
+        let draggedIndex = null; // Drag index tracker
+
+        // Web Audio synthesized sound context
+        let audioCtx = null;
+
+        // Initialize App on DOM Loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            initTheme();
+            migrateLegacyNotes();
+            renderApp();
+            startCountdown();
+            setupKeyboardShortcut();
+        });
+
+        // Initialize theme configuration
+        function initTheme() {
+            if (state.darkMode === undefined) {
+                state.darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+            applyThemeClass();
+        }
+
+        function toggleTheme() {
+            state.darkMode = !state.darkMode;
+            saveState();
+            applyThemeClass();
+            showToast(state.darkMode ? "Dark Mode Enabled" : "Light Mode Enabled", "fa-solid fa-circle-half-stroke");
+        }
+
+        function applyThemeClass() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+            
+            if (state.darkMode) {
+                html.classList.add('dark');
+                icon.className = "fa-solid fa-sun text-[#ff9f0a]";
+                text.innerText = "Light Mode";
+            } else {
+                html.classList.remove('dark');
+                icon.className = "fa-solid fa-moon text-[#505052]";
+                text.innerText = "Dark Mode";
+            }
+            
+            renderApp();
+        }
+
+        // Migrate legacy simple string notes to dynamic lists
+        function migrateLegacyNotes() {
+            let migrated = false;
+            SUBJECTS.forEach(sub => {
+                if (state.notes[sub] && state.notes[sub].trim() !== '' && (!state.items[sub] || state.items[sub].length === 0)) {
+                    if (!state.items[sub]) state.items[sub] = [];
+                    state.items[sub].push({
+                        id: 'legacy-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                        text: state.notes[sub],
+                        type: 'homework',
+                        completed: false
+                    });
+                    state.notes[sub] = ''; // Clear legacy note to prevent re-migration
+                    migrated = true;
+                }
+            });
+            if (migrated) {
+                saveState();
+            }
+        }
+
+        // Load data safely from localStorage
+        function loadState() {
+            const saved = localStorage.getItem('homework_tracker_v6_state');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                    
+                    // Ensure structural variables are always intact
+                    if (!state.items) {
+                        state.items = { ENGLISH: [], HINDI: [], MATHS: [], SCIENCE: [], SST: [], AI: [] };
+                    }
+                    if (!state.collapsed) {
+                        state.collapsed = { ENGLISH: false, HINDI: false, MATHS: false, SCIENCE: false, SST: false, AI: false };
+                    }
+                    SUBJECTS.forEach(sub => {
+                        if (!state.items[sub]) state.items[sub] = [];
+                        if (state.collapsed[sub] === undefined) state.collapsed[sub] = false;
+                    });
+                } catch (e) {
+                    console.error("Could not parse saved storage data, loading defaults.", e);
+                }
+            }
+        }
+
+        // Save data to localStorage (persistent forever)
+        function saveState() {
+            localStorage.setItem('homework_tracker_v6_state', JSON.stringify(state));
+        }
+
+        // Web Audio popping/chime synthesis sounds (tactile pops and clean chimes)
+        function playCheckSound() {
+            if (!state.soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const now = audioCtx.currentTime;
+                
+                // Pop (High & Quick)
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'triangle';
+                osc1.frequency.setValueAtTime(523.25, now); // C5
+                osc1.frequency.exponentialRampToValueAtTime(1046.50, now + 0.12); // C6
+                
+                gain1.gain.setValueAtTime(0.12, now);
+                gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.2);
+                
+                // Secondary Chime
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1318.51, now + 0.05); // E6
+                
+                gain2.gain.setValueAtTime(0.08, now + 0.05);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start(now + 0.05);
+                osc2.stop(now + 0.25);
+            } catch (err) {
+                console.log("Audio contextual trigger failed", err);
+            }
+        }
+
+        function playUncheckSound() {
+            if (!state.soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(329.63, now); // E4
+                osc.frequency.linearRampToValueAtTime(220.00, now + 0.15); // A3
+                
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            } catch (e) {}
+        }
+
+        // Lightweight Confetti Simulation
+        let confettiActive = false;
+        let confettiArray = [];
+        const colors = ['#0071e3', '#34c759', '#ff9500', '#ff2d55', '#af52de', '#5ac8fa'];
+
+        function triggerConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            confettiArray = [];
+            for (let i = 0; i < 120; i++) {
+                confettiArray.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    r: Math.random() * 6 + 4,
+                    d: Math.random() * canvas.height,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    tilt: Math.random() * 10 - 5,
+                    tiltAngleIncremental: Math.random() * 0.07 + 0.02,
+                    tiltAngle: 0
+                });
+            }
+
+            if (!confettiActive) {
+                confettiActive = true;
+                animateConfetti(canvas, ctx);
+            }
+        }
+
+        function animateConfetti(canvas, ctx) {
+            if (!confettiActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            let finished = true;
+            confettiArray.forEach((p, index) => {
+                p.tiltAngle += p.tiltAngleIncremental;
+                p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+                p.x += Math.sin(p.tiltAngle);
+                p.tilt = Math.sin(p.tiltAngle - index / 3) * 15;
+
+                if (p.y <= canvas.height) {
+                    finished = false;
+                }
+
+                ctx.beginPath();
+                ctx.lineWidth = p.r;
+                ctx.strokeStyle = p.color;
+                ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+                ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+                ctx.stroke();
+            });
+
+            if (finished) {
+                confettiActive = false;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            } else {
+                requestAnimationFrame(() => animateConfetti(canvas, ctx));
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('confettiCanvas');
+            if (canvas && confettiActive) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
+
+        // Drag and Drop ordering event actions
+        function dragStart(e, index) {
+            draggedIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function dragDrop(e, targetIndex) {
+            e.preventDefault();
+            if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+            const items = state.items[activeModalSubject];
+            const draggedItem = items[draggedIndex];
+
+            // Reorder item in array
+            items.splice(draggedIndex, 1);
+            items.splice(targetIndex, 0, draggedItem);
+
+            saveState();
+            renderApp();
+            renderModalItems();
+            if (state.soundEnabled) playCheckSound();
+        }
+
+        function dragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            draggedIndex = null;
+        }
+
+        // Tap-to-swap reorder control logic
+        function reorderTask(index, direction) {
+            const items = state.items[activeModalSubject];
+            if (!items) return;
+
+            if (direction === 'up' && index > 0) {
+                const temp = items[index];
+                items[index] = items[index - 1];
+                items[index - 1] = temp;
+            } else if (direction === 'down' && index < items.length - 1) {
+                const temp = items[index];
+                items[index] = items[index + 1];
+                items[index + 1] = temp;
+            }
+
+            saveState();
+            renderApp();
+            renderModalItems();
+            if (state.soundEnabled) playCheckSound();
+            showToast("Order updated", "fa-solid fa-arrows-up-down");
+        }
+
+        // Expand & Collapse controller
+        function toggleCollapse(sub) {
+            state.collapsed[sub] = !state.collapsed[sub];
+            saveState();
+            renderApp();
+        }
+
+        // Core View Redraw Logic (Flat Design, No Gradients/Shadows)
+        function renderApp() {
+            let done = 0;
+            const total = SUBJECTS.length;
+
+            SUBJECTS.forEach(sub => {
+                const isChecked = state.checked[sub];
+                const isCollapsed = state.collapsed[sub];
+                
+                const row = document.getElementById(`row-${sub}`);
+                const chk = document.getElementById(`chk-${sub}`);
+                const badge = document.getElementById(`badge-${sub}`);
+                const chevron = document.getElementById(`chevron-${sub}`);
+                
+                // Get display containers
+                const itemsContainer = document.getElementById(`items-container-${sub}`);
+                const hwList = document.getElementById(`hw-list-${sub}`);
+                const notesContainer = document.getElementById(`notes-container-${sub}`);
+
+                // 1. Rendering checkboxes
+                if (isChecked) {
+                    done++;
+                    row.style.borderColor = state.darkMode ? "#30d158" : "#34c759";
+                    row.style.backgroundColor = state.darkMode ? "#1d2e22" : "#f2fbf4";
+                    
+                    chk.className = "springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl transition-all bg-[#34c759] dark:bg-[#30d158] border-2 border-[#34c759] dark:border-[#30d158] text-white flex-shrink-0";
+                    chk.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    
+                    badge.className = "text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#34c759]/10 text-[#34c759] dark:text-[#30d158] uppercase tracking-wider";
+                    badge.innerText = "Completed 🎉";
+                } else {
+                    row.style.borderColor = "transparent";
+                    row.style.backgroundColor = "transparent";
+                    
+                    chk.className = "springy-check h-14 w-14 rounded-2xl flex items-center justify-center text-xl transition-all bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-[#d2d2d7] dark:border-[#3a3a3c] text-transparent hover:bg-[#e5e5e7] dark:hover:bg-[#3a3a3c] hover:border-[#86868b] flex-shrink-0";
+                    chk.innerHTML = '';
+                    
+                    badge.className = "text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#f5f5f7] dark:bg-[#2c2c2e] text-[#86868b] dark:text-[#8e8e93] uppercase tracking-wider";
+                    badge.innerText = "Pending";
+                }
+
+                // 2. Adjust chevron rotational state
+                if (isCollapsed) {
+                    chevron.classList.remove('rotate-180');
+                    itemsContainer.classList.add('hidden');
+                } else {
+                    chevron.classList.add('rotate-180');
+                    const subItems = state.items[sub] || [];
+                    if (subItems.length > 0) {
+                        itemsContainer.classList.remove('hidden');
+                    } else {
+                        itemsContainer.classList.add('hidden');
+                    }
+                }
+
+                // 3. Clear lists
+                hwList.innerHTML = '';
+                notesContainer.innerHTML = '';
+
+                // 4. Inject details from nested state items
+                const subItems = state.items[sub] || [];
+                subItems.forEach(item => {
+                    if (item.type === 'homework') {
+                        // Display as interactive checklist sub-task
+                        const li = document.createElement('li');
+                        li.className = "flex items-center gap-3 py-1 px-2 rounded-lg cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs font-bold text-[#1d1d1f] dark:text-[#f5f5f7]";
+                        li.onclick = (e) => {
+                            e.stopPropagation();
+                            toggleSubItem(sub, item.id);
+                        };
+
+                        const iconBox = item.completed 
+                            ? `<span class="text-[#34c759] dark:text-[#30d158] text-sm"><i class="fa-solid fa-square-check"></i></span>` 
+                            : `<span class="text-[#86868b] dark:text-[#8e8e93] text-sm"><i class="fa-regular fa-square"></i></span>`;
+
+                        li.innerHTML = `
+                            ${iconBox}
+                            <span class="break-words leading-tight ${item.completed ? 'line-through opacity-50' : ''}">${item.text}</span>
+                        `;
+                        hwList.appendChild(li);
+                    } else if (item.type === 'note') {
+                        // Display as dynamic high-contrast yellow pill capsules
+                        const pill = document.createElement('span');
+                        pill.className = "inline-flex items-center gap-1.5 text-[10px] font-extrabold px-3 py-1 bg-[#ffd60a] text-[#121212] rounded-full uppercase tracking-wider break-words max-w-full border-0";
+                        pill.innerHTML = `<i class="fa-solid fa-note-sticky text-[9px] opacity-75"></i> <span>${item.text}</span>`;
+                        notesContainer.appendChild(pill);
+                    }
+                });
+            });
+
+            // Calculate overall percentage
+            const pct = Math.round((done / total) * 100);
+            
+            // Dashboard values update
+            document.getElementById('doneCount').innerText = done;
+            document.getElementById('percentageText').innerText = `${pct}%`;
+
+            // Draw circular flat ring gauge stroke
+            const strokeDash = 213.6; // 2 * PI * r(34)
+            const strokeOffset = strokeDash - (pct / 100) * strokeDash;
+            document.getElementById('progressCircle').setAttribute('stroke-dashoffset', strokeOffset);
+
+            // Populate motivation cheer texts
+            const motivation = document.getElementById('motivationPhrase');
+            if (pct === 0) {
+                motivation.innerText = "Let's make a start! 🎒";
+            } else if (pct < 34) {
+                motivation.innerText = "Great initial step! 👍";
+            } else if (pct < 67) {
+                motivation.innerText = "Over halfway done! 🌟";
+            } else if (pct < 100) {
+                motivation.innerText = "Almost finished! 🏎️";
+            } else {
+                motivation.innerText = "All done! Time to celebrate! 🥳";
+            }
+
+            // Sync countdown parameters with input configurations
+            document.getElementById('deadlineInput').value = state.deadline;
+            document.getElementById('rewardInput').value = state.reward;
+        }
+
+        // Toggling Checked Subjects (Top-Down Sync)
+        function toggleSubject(sub) {
+            const wasCompleted = state.checked[sub];
+            const newState = !wasCompleted;
+            state.checked[sub] = newState;
+            
+            // Top-down sync: Check or uncheck all corresponding sub-tasks
+            if (state.items[sub]) {
+                state.items[sub].forEach(item => {
+                    if (item.type === 'homework') {
+                        item.completed = newState;
+                    }
+                });
+            }
+
+            if (state.checked[sub]) {
+                playCheckSound();
+                showToast(`Marked ${sub} as Completed!`, "fa-solid fa-circle-check");
+                
+                // Check if 100% completed
+                const allDone = Object.values(state.checked).every(val => val === true);
+                if (allDone) {
+                    setTimeout(() => {
+                        triggerConfetti();
+                        showToast("ALL HOMEWORK COMPLETED!", "fa-solid fa-trophy");
+                    }, 200);
+                }
+            } else {
+                playUncheckSound();
+                showToast(`Marked ${sub} as Pending`, "fa-solid fa-circle-minus");
+            }
+            
+            saveState();
+            renderApp();
+        }
+
+        // Toggling Sub Item (Bottom-Up Sync)
+        function toggleSubItem(subject, itemId) {
+            if (!state.items[subject]) return;
+            
+            const item = state.items[subject].find(i => i.id === itemId);
+            if (item) {
+                item.completed = !item.completed;
+                if (item.completed) {
+                    playCheckSound();
+                } else {
+                    playUncheckSound();
+                }
+
+                // Bottom-Up Sync Checklist Rules:
+                const homeworkItems = state.items[subject].filter(i => i.type === 'homework');
+                if (homeworkItems.length > 0) {
+                    const allCompleted = homeworkItems.every(i => i.completed);
+                    const wasChecked = state.checked[subject];
+                    state.checked[subject] = allCompleted;
+
+                    if (allCompleted && !wasChecked) {
+                        playCheckSound();
+                        showToast(`${subject} automatically completed!`, "fa-solid fa-circle-check");
+                        
+                        // Check if 100% completed
+                        const allDone = Object.values(state.checked).every(val => val === true);
+                        if (allDone) {
+                            setTimeout(() => {
+                                triggerConfetti();
+                                showToast("ALL HOMEWORK COMPLETED!", "fa-solid fa-trophy");
+                            }, 200);
+                        }
+                    }
+                }
+
+                saveState();
+                renderApp();
+            }
+        }
+
+        // Saving target deadline date
+        function saveDeadline() {
+            const val = document.getElementById('deadlineInput').value;
+            state.deadline = val;
+            saveState();
+            startCountdown();
+            showToast("Target date updated!", "fa-solid fa-calendar");
+        }
+
+        // Changing goal reward details
+        function saveReward() {
+            const val = document.getElementById('rewardInput').value;
+            state.reward = val;
+            saveState();
+            showToast("Reward goal saved!", "fa-solid fa-gift");
+        }
+
+        // Open custom Task Creator Dialog Popup Box
+        function openTaskModal(subject) {
+            activeModalSubject = subject;
+            activeModalType = 'homework'; // default
+            
+            document.getElementById('modalSubjectName').innerText = subject;
+            document.getElementById('modalInput').value = '';
+            
+            // Sync selection styling defaults
+            selectModalType('homework');
+            
+            // Render specific subject elements in modal scroll list
+            renderModalItems();
+            
+            // Pop box up
+            const modal = document.getElementById('taskModal');
+            modal.classList.remove('hidden');
+            
+            // Auto focus
+            setTimeout(() => {
+                document.getElementById('modalInput').focus();
+            }, 100);
+        }
+
+        function closeTaskModal() {
+            const modal = document.getElementById('taskModal');
+            modal.classList.add('hidden');
+            activeModalSubject = '';
+        }
+
+        // Dismiss modal when clicking backdrop area (great interactive polish)
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('taskModal');
+            if (e.target === modal) {
+                closeTaskModal();
+            }
+        });
+
+        // Toggling Task / Note Category selection inside dialog box
+        function selectModalType(type) {
+            activeModalType = type;
+            const btnHW = document.getElementById('btnTypeHomework');
+            const btnNT = document.getElementById('btnTypeNote');
+            
+            if (type === 'homework') {
+                btnHW.className = "py-2.5 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-[#0071e3]/10 border-[#0071e3] text-[#0071e3] dark:bg-[#0a84ff]/10 dark:border-[#0a84ff] dark:text-[#0a84ff]";
+                btnNT.className = "py-2.5 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-transparent border-[#e5e5e7] dark:border-[#3a3a3c] text-[#86868b] dark:text-[#8e8e93]";
+            } else {
+                btnHW.className = "py-2.5 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-transparent border-[#e5e5e7] dark:border-[#3a3a3c] text-[#86868b] dark:text-[#8e8e93]";
+                btnNT.className = "py-2.5 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-[#ffd60a]/20 border-[#ffd60a] text-black dark:text-[#ffd60a]";
+            }
+        }
+
+        // Adding Task item into structured state database
+        function addTaskFromModal() {
+            const input = document.getElementById('modalInput');
+            const textVal = input.value.trim();
+            
+            if (!textVal) {
+                showToast("Please enter a description!", "fa-solid fa-circle-exclamation");
+                return;
+            }
+            
+            if (!state.items[activeModalSubject]) {
+                state.items[activeModalSubject] = [];
+            }
+            
+            // Generate standard unique item ID string
+            const itemId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+            
+            state.items[activeModalSubject].push({
+                id: itemId,
+                text: textVal,
+                type: activeModalType,
+                completed: false
+            });
+
+            // If a pending homework sub-task is added, automatically uncheck main subject checkbox
+            if (activeModalType === 'homework' && state.checked[activeModalSubject]) {
+                state.checked[activeModalSubject] = false;
+            }
+            
+            saveState();
+            renderApp();
+            renderModalItems();
+            
+            input.value = '';
+            input.focus();
+            
+            // Soft click synth confirmation
+            if (state.soundEnabled) playCheckSound();
+            showToast(`Added to ${activeModalSubject}!`, "fa-solid fa-plus");
+        }
+
+        // Delete specific assignments out of nested structures
+        function deleteTask(subject, itemId) {
+            if (!state.items[subject]) return;
+            
+            state.items[subject] = state.items[subject].filter(item => item.id !== itemId);
+
+            // Bottom-Up Sync Checklist Rules on deletion:
+            const homeworkItems = state.items[subject].filter(i => i.type === 'homework');
+            if (homeworkItems.length > 0) {
+                const allCompleted = homeworkItems.every(i => i.completed);
+                state.checked[subject] = allCompleted;
+            } else {
+                state.checked[subject] = false; // reset to unchecked if empty
+            }
+            
+            saveState();
+            renderApp();
+            renderModalItems();
+            
+            if (state.soundEnabled) playUncheckSound();
+            showToast("Item deleted", "fa-solid fa-trash-can");
+        }
+
+        // Redrawing popup list items dynamically (Drag & Drop + Arrows)
+        function renderModalItems() {
+            const list = document.getElementById('modalItemsList');
+            list.innerHTML = '';
+            const items = state.items[activeModalSubject] || [];
+
+            if (items.length === 0) {
+                list.innerHTML = `<p class="text-xs font-bold text-[#86868b] dark:text-[#8e8e93] text-center py-5">No tasks added yet. Write your first task above!</p>`;
+                return;
+            }
+
+            items.forEach((item, index) => {
+                const itemRow = document.createElement('div');
+                itemRow.className = "draggable-row flex items-center justify-between gap-4 py-2.5 border-b border-[#e5e5e7]/50 dark:border-[#2c2c2e]/50 last:border-0 cursor-grab active:cursor-grabbing transition-opacity";
+                itemRow.setAttribute('draggable', 'true');
+                
+                // Attach HTML5 Drag-and-Drop Event Listeners
+                itemRow.addEventListener('dragstart', (e) => dragStart(e, index));
+                itemRow.addEventListener('dragover', (e) => dragOver(e));
+                itemRow.addEventListener('drop', (e) => dragDrop(e, index));
+                itemRow.addEventListener('dragend', (e) => dragEnd(e));
+                
+                let typeBadge = '';
+                if (item.type === 'homework') {
+                    typeBadge = `<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#0071e3]/10 text-[#0071e3] dark:text-[#0a84ff] uppercase tracking-wider">HW</span>`;
+                } else {
+                    typeBadge = `<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#ffd60a] text-black uppercase tracking-wider">Note</span>`;
+                }
+
+                // Sorting action button layouts
+                const isFirst = index === 0;
+                const isLast = index === items.length - 1;
+
+                itemRow.innerHTML = `
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <!-- Drag Icon Handle -->
+                        <span class="text-[#86868b] dark:text-[#8e8e93] text-xs cursor-grab">
+                            <i class="fa-solid fa-grip-lines"></i>
+                        </span>
+                        ${typeBadge}
+                        <span class="text-xs font-bold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">${item.text}</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-1">
+                        <!-- Up Arrow -->
+                        <button onclick="reorderTask(${index}, 'up')" 
+                                class="p-1 text-xs hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e] rounded text-[#86868b] dark:text-[#8e8e93] disabled:opacity-30 disabled:pointer-events-none transition" 
+                                ${isFirst ? 'disabled' : ''} title="Move Up">
+                            <i class="fa-solid fa-chevron-up"></i>
+                        </button>
+                        <!-- Down Arrow -->
+                        <button onclick="reorderTask(${index}, 'down')" 
+                                class="p-1 text-xs hover:bg-[#f5f5f7] dark:hover:bg-[#2c2c2e] rounded text-[#86868b] dark:text-[#8e8e93] disabled:opacity-30 disabled:pointer-events-none transition" 
+                                ${isLast ? 'disabled' : ''} title="Move Down">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <!-- Delete Button -->
+                        <button onclick="deleteTask('${activeModalSubject}', '${item.id}')" class="text-[#ff3b30] hover:text-[#ff453a] transition p-1 ml-1" title="Delete Task">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(itemRow);
+            });
+        }
+
+        // Setup enter key trigger inside modal input
+        function setupKeyboardShortcut() {
+            document.getElementById('modalInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    addTaskFromModal();
+                }
+            });
+        }
+
+        // Sound Toggle Button controller
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            saveState();
+            
+            const icon = document.getElementById('soundIcon');
+            const btn = document.getElementById('soundToggle');
+            if (state.soundEnabled) {
+                icon.className = "fa-solid fa-volume-high text-[#34c759] dark:text-[#30d158]";
+                btn.querySelector('span').innerText = "Sounds: ON";
+                showToast("Sounds Enabled", "fa-solid fa-volume-high");
+            } else {
+                icon.className = "fa-solid fa-volume-xmark text-[#86868b] dark:text-[#8e8e93]";
+                btn.querySelector('span').innerText = "Sounds: OFF";
+                showToast("Sounds Muted", "fa-solid fa-volume-xmark");
+            }
+        }
+
+        // Reset all application data safely (Flat dialog trigger)
+        function resetTracker() {
+            const choice = document.createElement('div');
+            choice.className = "fixed inset-0 bg-black/50 backdrop-blur-xs z-[100] flex items-center justify-center p-4";
+            choice.innerHTML = `
+                <div class="bg-white dark:bg-[#1c1c1e] rounded-2xl p-6 max-w-sm w-full border border-[#e5e5e7] dark:border-[#2c2c2e] text-center transition-colors">
+                    <div class="h-12 w-12 bg-[#ff3b30]/10 text-[#ff3b30] dark:bg-[#ff453a]/10 dark:text-[#ff453a] rounded-xl mx-auto flex items-center justify-center text-xl mb-4 border border-[#ff3b30]/20">
+                        <i class="fa-solid fa-arrow-rotate-left"></i>
+                    </div>
+                    <h4 class="font-extrabold text-lg text-[#1d1d1f] dark:text-[#f5f5f7]">Reset your progress?</h4>
+                    <p class="text-[#86868b] dark:text-[#8e8e93] text-xs font-semibold mt-2">This will clear your checked subjects, assignments, and notes.</p>
+                    <div class="flex gap-3 mt-6">
+                        <button id="cancelReset" class="flex-1 py-2 px-4 bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-[#e5e5e7] dark:hover:bg-[#3a3a3c] text-[#1d1d1f] dark:text-[#f5f5f7] font-bold rounded-xl text-xs transition border border-[#e5e5e7] dark:border-[#3a3a3c]">Cancel</button>
+                        <button id="confirmReset" class="flex-1 py-2 px-4 bg-[#ff3b30] hover:bg-[#d72f25] text-white font-bold rounded-xl text-xs transition border-0">Reset</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(choice);
+
+            document.getElementById('cancelReset').onclick = () => {
+                choice.remove();
+            };
+
+            document.getElementById('confirmReset').onclick = () => {
+                localStorage.removeItem('homework_tracker_v6_state');
+                state = {
+                    checked: { ENGLISH: false, HINDI: false, MATHS: false, SCIENCE: false, SST: false, AI: false },
+                    notes: { ENGLISH: '', HINDI: '', MATHS: '', SCIENCE: '', SST: '', AI: '' },
+                    items: { ENGLISH: [], HINDI: [], MATHS: [], SCIENCE: [], SST: [], AI: [] },
+                    collapsed: { ENGLISH: false, HINDI: false, MATHS: false, SCIENCE: false, SST: false, AI: false },
+                    deadline: '2026-06-05',
+                    reward: 'Pizza Party & Celebratory Outing!',
+                    soundEnabled: state.soundEnabled,
+                    darkMode: state.darkMode
+                };
+                saveState();
+                renderApp();
+                startCountdown();
+                choice.remove();
+                showToast("Tracker has been reset.", "fa-solid fa-rotate-left");
+            };
+        }
+
+        // Custom flat Toast alert window animation
+        function showToast(message, iconClass) {
+            const toast = document.getElementById('customAlert');
+            const msg = document.getElementById('alertMessage');
+            const icon = document.getElementById('alertIcon');
+
+            msg.innerText = message;
+            icon.className = iconClass;
+
+            toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // Live countdown clock computation math
+        let timerInterval = null;
+        function startCountdown() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            function updateTime() {
+                const target = new Date(state.deadline + 'T23:59:59').getTime();
+                const now = new Date().getTime();
+                const diff = target - now;
+
+                if (diff <= 0) {
+                    document.getElementById('daysLeft').innerText = "00";
+                    document.getElementById('hoursLeft').innerText = "00";
+                    document.getElementById('minsLeft').innerText = "00";
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+                document.getElementById('daysLeft').innerText = String(days).padStart(2, '0');
+                document.getElementById('hoursLeft').innerText = String(hours).padStart(2, '0');
+                document.getElementById('minsLeft').innerText = String(mins).padStart(2, '0');
+            }
+
+            updateTime();
+            timerInterval = setInterval(updateTime, 60000); // update once every minute
+        }
+    </script>
+</body>
+</html>
